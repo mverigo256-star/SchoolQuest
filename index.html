@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>SchoolQuest</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  body { background:#0a0a0f; color:#e8e8f0; min-height:100vh; padding-bottom:76px; overflow-x:hidden; }
+  .header { padding:16px; background:linear-gradient(180deg,#14141e,#0a0a0f); border-bottom:1px solid #22222e; position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-size:20px; font-weight:800; letter-spacing:.5px; background:linear-gradient(90deg,#a855f7,#22d3ee); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .header .me { font-size:12px; color:#888; }
+  .screen { display:none; padding:16px; }
+  .screen.active { display:block; animation:fade .25s ease; }
+  @keyframes fade { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  .card { background:#16161f; border:1px solid #262634; border-radius:16px; padding:16px; margin-bottom:12px; transition:.2s; position:relative; }
+  .card.admin-task { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); background: linear-gradient(180deg, #1f1d18, #16161f); }
+  .card.pinned-task { border-color: #fbbf24; border-width: 2px; }
+  .card.daily-task { border-color: #22d3ee; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); background: linear-gradient(180deg, #0d1f24, #16161f); }
+
+  h2.title { font-size:17px; font-weight:700; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  input, textarea, select { width:100%; padding:14px; background:#0f0f16; border:1px solid #262634; border-radius:12px; color:#e8e8f0; font-size:15px; margin-bottom:12px; outline:none; transition:.2s; resize:none; }
+  textarea { min-height:70px; line-height:1.5; }
+  input::placeholder, textarea::placeholder { color:#555; }
+  input:focus, textarea:focus, select:focus { border-color:#a855f7; box-shadow:0 0 0 3px rgba(168,85,247,.15); }
+  select { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23a855f7' stroke-width='2' fill='none'/></svg>"); background-repeat:no-repeat; background-position:right 16px center; padding-right:40px; }
+  button { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; transition:.15s; margin-bottom:10px; }
+  button:active { transform:scale(.98); }
+  .btn-primary { background:linear-gradient(135deg,#a855f7,#7c3aed); color:#fff; box-shadow:0 4px 20px rgba(168,85,247,.3); }
+  .btn-secondary { background:transparent; color:#a855f7; border:1px solid #a855f7; }
+  .btn-danger { background:transparent; color:#f43f5e; border:1px solid #f43f5e; }
+  .btn-gold { background:transparent; color:#fbbf24; border:1px solid #fbbf24; }
+  .btn-small { width:auto; padding:10px 18px; margin:0; font-size:13px; border-radius:10px; }
+  .btn-primary:disabled { opacity:.5; cursor:default; }
+  
+  .nav { position:fixed; bottom:0; left:0; right:0; background:#12121a; border-top:1px solid #22222e; display:flex; padding:6px 0 8px; z-index:20; }
+  .nav button { background:none; border:none; color:#555; font-size:10px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px; margin:0; font-weight:500; flex:1; }
+  .nav button .ico { font-size:20px; line-height:1; }
+  .nav button.active { color:#a855f7; }
+
+  .feed-item { display:flex; gap:12px; align-items:flex-start; }
+  .avatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:linear-gradient(135deg,#a855f7,#22d3ee); box-shadow:0 0 12px rgba(168,85,247,.3); }
+  .feed-text { flex:1; font-size:14px; line-height:1.55; }
+  .feed-text b { color:#a855f7; cursor:pointer; }
+  .feed-text .cls { color:#22d3ee; font-size:12px; font-weight:600; }
+  .feed-text .task { color:#ccc; }
+  .feed-text .done-label { color:#22d3ee; font-size:12px; font-weight:600; }
+  .reward-badge { display:inline-block; background:rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.4); padding:3px 9px; border-radius:8px; font-size:12px; color:#22d3ee; margin-top:6px; font-weight:600; }
+  .time { font-size:11px; color:#555; margin-top:6px; }
+  
+  .feed-photo { width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-top:10px; border:1px solid #333; }
+  .feed-actions { display:flex; gap:15px; margin-top:10px; border-top:1px solid #22222e; padding-top:10px; }
+  .feed-actions button { background:none; border:none; color:#888; font-size:13px; width:auto; padding:0; margin:0; cursor:pointer; display:flex; align-items:center; gap:5px; }
+  .feed-actions button.liked { color:#f43f5e; }
+  .comments-section { margin-top:10px; background:#0f0f16; border-radius:10px; padding:10px; display:none; }
+  .comment { font-size:12px; margin-bottom:6px; border-bottom:1px solid #1a1a24; padding-bottom:6px; }
+  .comment b { color:#a855f7; }
+  
+  .task-title { font-size:16px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; color:#e8e8f0;}
+  .task-author { font-size:12px; color:#888; margin-bottom:8px; }
+  .task-desc { font-size:13px; color:#999; margin-bottom:12px; line-height:1.5; }
+  .task-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .points { color:#22d3ee; font-size:13px; font-weight:700; white-space:nowrap; }
+  
+  .filter-row { display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:5px; }
+  .filter-btn { background:#16161f; border:1px solid #262634; color:#888; padding:8px 16px; border-radius:20px; font-size:12px; white-space:nowrap; cursor:pointer; }
+  .filter-btn.active { background:rgba(168,85,247,.2); border-color:#a855f7; color:#a855f7; font-weight:700; }
+
+  .lb-row { display:flex; align-items:center; padding:14px 0; border-bottom:1px solid #22222e; cursor:pointer; }
+  .lb-row:last-child { border:none; }
+  .rank { width:36px; font-size:16px; font-weight:800; color:#a855f7; text-align:center; }
+  .rank.gold { color:#fbbf24; } .rank.silver { color:#94a3b8; } .rank.bronze { color:#d97706; }
+  .lb-class { flex:1; padding-left:6px; }
+  .lb-class b { font-size:15px; }
+  .lb-class small { color:#666; font-size:12px; display:block; margin-top:2px; }
+  .lb-points { color:#22d3ee; font-weight:800; font-size:15px; }
+  
+  .profile-head { text-align:center; padding:20px 0 10px; }
+  .profile-head .avatar { width:84px; height:84px; font-size:42px; margin:0 auto 14px; }
+  .profile-head h3 { font-size:20px; margin-bottom:4px; }
+  .profile-head p { color:#22d3ee; font-size:13px; font-weight:600; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0; }
+  .stat { background:#16161f; border:1px solid #262634; border-radius:14px; padding:14px 8px; text-align:center; }
+  .stat b { display:block; font-size:20px; color:#a855f7; margin-bottom:2px; }
+  .stat small { font-size:10px; color:#666; }
+
+  .level-bar-container { background:#16161f; border:1px solid #262634; border-radius:12px; padding:12px; margin-bottom:16px; }
+  .level-bar-text { display:flex; justify-content:space-between; font-size:12px; font-weight:700; margin-bottom:6px; }
+  .level-bar-bg { height:8px; background:#0f0f16; border-radius:10px; overflow:hidden; }
+  .level-bar-fill { height:100%; background:linear-gradient(90deg,#a855f7,#22d3ee); border-radius:10px; transition:width 0.3s; }
+  
+  .badges { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+  .badge { background:#1f1d18; border:1px solid #fbbf24; color:#fbbf24; padding:8px 12px; border-radius:10px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:5px; box-shadow:0 0 10px rgba(251,191,36,0.2); }
+
+  .tag { display:inline-block; padding:5px 11px; border-radius:8px; font-size:11px; background:rgba(168,85,247,.12); color:#a855f7; margin:3px; font-weight:600; }
+  .empty { text-align:center; color:#555; padding:44px 20px; font-size:14px; }
+  .empty .ico { font-size:36px; display:block; margin-bottom:10px; }
+  .error { color:#f43f5e; font-size:13px; margin-bottom:12px; padding:10px 12px; background:rgba(244,63,94,.1); border-radius:10px; border:1px solid rgba(244,63,94,.3); }
+  .ban-banner { background:rgba(244,63,94,.15); border:1px solid #f43f5e; padding:16px; border-radius:12px; margin-bottom:16px; text-align:center; }
+  .ban-banner h3 { color:#f43f5e; font-size:16px; margin-bottom:6px; }
+  .ban-banner p { font-size:13px; color:#e8e8f0; }
+  .divider { height:1px; background:#22222e; margin:16px 0; }
+  .section-label { font-size:13px; color:#888; font-weight:600; margin:20px 0 10px; text-transform:uppercase; letter-spacing:.5px; }
+  
+  .user-row { display:flex; justify-content:space-between; align-items:center; padding:12px; background:#0f0f16; border:1px solid #262634; border-radius:12px; margin-bottom:8px; }
+  .user-info b { display:block; font-size:14px; margin-bottom:2px; }
+  .user-info small { color:#22d3ee; font-size:12px; }
+  
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:#a855f7; color:#fff; padding:12px 22px; border-radius:12px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.3s; z-index:100; box-shadow:0 6px 24px rgba(168,85,247,.4); max-width:90%; text-align:center; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .fab-admin { position:fixed; bottom:90px; right:20px; width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#000; font-size:24px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(251,191,36,0.5); z-index:50; cursor:pointer; border:none; }
+  .fab-admin:active { transform:scale(0.95); }
+
+  .battle-container { display:flex; justify-content:space-between; align-items:center; background:#16161f; border:1px solid #262634; border-radius:16px; padding:16px; margin-bottom:16px; }
+  .battle-class { text-align:center; flex:1; }
+  .battle-class h4 { font-size:20px; color:#fff; margin-bottom:4px; }
+  .battle-class p { font-size:12px; color:#22d3ee; font-weight:700; }
+  .battle-vs { font-size:24px; font-weight:900; color:#f43f5e; margin:0 15px; text-shadow:0 0 10px rgba(244,63,94,0.5); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎯 SchoolQuest</h1>
+  <div class="me" id="header-me"></div>
+</div>
+
+<div id="screen-auth" class="screen active">
+  <div class="card">
+    <h2 class="title">Регистрация</h2>
+    <div id="auth-error"></div>
+    <input id="reg-name" placeholder="Имя и Фамилия" maxlength="40" autocomplete="off">
+    <input id="reg-pass" type="password" placeholder="Пароль" autocomplete="new-password">
+    <input id="reg-pass2" type="password" placeholder="Повтори пароль" autocomplete="new-password">
+    <select id="reg-class">
+      <option value="">— Выбери свой класс —</option>
+      <optgroup label="Средняя школа"><option>5А</option><option>5Б</option><option>5В</option><option>6А</option><option>6Б</option><option>6В</option><option>7А</option><option>7Б</option><option>7В</option><option>8А</option><option>8Б</option><option>8В</option><option>9А</option><option>9Б</option><option>9В</option></optgroup>
+      <optgroup label="Старшая школа"><option>10А</option><option>10Б</option><option>11А</option><option>11Б</option></optgroup>
+    </select>
+    <button class="btn-primary" onclick="register()">Создать аккаунт</button>
+    <button class="btn-secondary" onclick="showScreen('auth-login')">Уже есть аккаунт →</button>
+  </div>
+</div>
+
+<div id="screen-auth-login" class="screen">
+  <div class="card">
+    <h2 class="title">Вход</h2>
+    <div id="login-error"></div>
+    <input id="log-name" placeholder="Имя и Фамилия" maxlength="40" autocomplete="off">
+    <input id="log-pass" type="password" placeholder="Пароль" autocomplete="current-password">
+    <button class="btn-primary" onclick="login()">Войти</button>
+    <button class="btn-secondary" onclick="showScreen('auth')">← Назад к регистрации</button>
+  </div>
+</div>
+
+<div id="screen-feed" class="screen">
+  <h2 class="title">📢 Лента школы</h2>
+  <div class="section-label">🏆 Зал славы</div>
+  <div id="hall-of-fame" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;"></div>
+  <div id="feed-list"></div>
+</div>
+
+<div id="screen-tasks" class="screen">
+  <h2 class="title">🎯 Задания</h2>
+  <div class="filter-row">
+    <button class="filter-btn active" onclick="setTaskFilter('all', this)">Все</button>
+    <button class="filter-btn" onclick="setTaskFilter('myclass', this)">Мой класс</button>
+    <button class="filter-btn" onclick="setTaskFilter('official', this)">👑 Официальные</button>
+  </div>
+  <div id="tasks-list"></div>
+</div>
+
+<div id="screen-create" class="screen">
+  <h2 class="title">✏️ Придумай задание</h2>
+  <div id="create-ban-warning"></div>
+  <div class="card">
+    <div id="create-error"></div>
+    <input id="new-title" placeholder="Название задания" maxlength="60">
+    <textarea id="new-desc" placeholder="Опиши, что нужно сделать (по желанию)" maxlength="300"></textarea>
+    <input id="new-reward" placeholder="🎁 Награда (что получишь)" maxlength="60">
+    <button class="btn-primary" onclick="createTask()">Опубликовать задание</button>
+  </div>
+</div>
+
+<div id="screen-leaderboard" class="screen">
+  <h2 class="title">🏆 Рейтинг</h2>
+  <div class="section-label" style="color:#f43f5e">⚔️ Битва классов</div>
+  <div id="battle-container"></div>
+  <div class="section-label">Рейтинг классов</div>
+  <div id="leaderboard-list"></div>
+</div>
+
+<div id="screen-class-manage" class="screen">
+  <h2 class="title"><button class="btn-secondary btn-small" onclick="showScreen('leaderboard')" style="width:auto; padding:5px 15px; margin:0;">← Назад</button> <span id="manage-class-title">Класс</span></h2>
+  <div id="class-users-list"></div>
+  <button class="btn-danger" onclick="deleteWholeClass()" style="margin-top:20px;">Удалить весь класс</button>
+</div>
+
+<div id="screen-user-profile" class="screen">
+  <h2 class="title"><button class="btn-secondary btn-small" onclick="showScreen('leaderboard')" style="width:auto; padding:5px 15px; margin:0;">← Назад</button> Профиль</h2>
+  <div id="user-profile-content"></div>
+</div>
+
+<div id="screen-chat" class="screen">
+  <h2 class="title"><button class="btn-secondary btn-small" onclick="showScreen('profile')" style="width:auto; padding:5px 15px; margin:0;">← Назад</button> <span id="chat-title">Чат</span></h2>
+  <div id="chat-messages" style="background:#0f0f16; border:1px solid #262634; border-radius:12px; padding:12px; height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:12px;"></div>
+  <div style="display:flex; gap:8px;">
+    <input id="chat-input" placeholder="Написать сообщение..." style="margin:0;">
+    <button class="btn-primary" style="width:60px; padding:0;" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<div id="screen-profile" class="screen"><div id="profile-content"></div></div>
+
+<div id="screen-admin-panel" class="screen">
+  <h2 class="title" style="color:#fbbf24">👑 Админ Панель</h2>
+  
+  <div class="section-label" style="color:#fbbf24">Создать официальное задание</div>
+  <div class="card">
+    <input id="off-title" placeholder="Название задания" style="margin-bottom:10px">
+    <input id="off-desc" placeholder="Описание" style="margin-bottom:10px">
+    <input id="off-reward" placeholder="Награда" style="margin-bottom:10px">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+      <input type="checkbox" id="off-pinned" style="width:20px; height:20px; margin:0;">
+      <label for="off-pinned" style="font-size:14px; color:#ccc;">Закрепить вверху (📌)</label>
+    </div>
+    <button class="btn-gold" onclick="createOfficialTask()">Опубликовать 👑</button>
+  </div>
+
+  <div class="section-label" style="color:#f43f5e">Быстрый бан</div>
+  <div class="card">
+    <input id="ban-name" placeholder="Имя Фамилия ученика" style="margin-bottom:10px">
+    <input id="ban-days" type="number" placeholder="На сколько дней?" style="margin-bottom:10px">
+    <input id="ban-reason" placeholder="Причина бана" style="margin-bottom:10px">
+    <button class="btn-danger" onclick="banUser()">Забанить ученика</button>
+  </div>
+
+  <div class="section-label" style="color:#f43f5e">Глобальные действия</div>
+  <div class="card">
+    <button class="btn-danger" onclick="clearFeed()" style="margin-bottom:10px;">Очистить всю ленту</button>
+    <button class="btn-danger" onclick="clearAllTasks()">Удалить все задания</button>
+  </div>
+</div>
+
+<nav class="nav" id="nav" style="display:none;">
+  <button data-screen="feed" onclick="showScreen('feed')"><span class="ico">📢</span><span>Лента</span></button>
+  <button data-screen="tasks" onclick="showScreen('tasks')"><span class="ico">🎯</span><span>Задания</span></button>
+  <button data-screen="create" onclick="showScreen('create')"><span class="ico">✏️</span><span>Создать</span></button>
+  <button data-screen="leaderboard" onclick="showScreen('leaderboard')"><span class="ico">🏆</span><span>Рейтинг</span></button>
+  <button data-screen="profile" onclick="showScreen('profile')"><span class="ico">👤</span><span>Профиль</span></button>
+</nav>
+
+<button id="fab-admin" class="fab-admin" style="display:none;" onclick="showScreen('admin-panel')">⚙️</button>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="photo-input" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)">
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, increment, deleteDoc, getDoc, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAhATSP1bfid2VVRc3tSWuQJcnaee5LrxI",
+  authDomain: "annonim-ff8d2.firebaseapp.com",
+  projectId: "annonim-ff8d2",
+  storageBucket: "annonim-ff8d2.firebasestorage.app",
+  messagingSenderId: "418219622581",
+  appId: "1:418219622581:web:9fcd882f6a7d2c5e1c7efc",
+  measurementId: "G-YPPH7Y09MH"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const Session = { getId: () => localStorage.getItem('userId') || null, setId: id => localStorage.setItem('userId', id), clear: () => localStorage.removeItem('userId') };
+let ME = null, IS_ADMIN = false, CURRENT_CLASS_VIEW = '', CURRENT_TASK_FILTER = 'all', TEMP_PHOTO = '';
+let CURRENT_CHAT_USER = null; // Для ЛС
+const BAD_WORDS = ['дурак', 'идиот', 'мат', 'блин', 'какашка', 'тупой'];
+
+window.showScreen = function(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
+  
+  if (name === 'feed') renderFeed();
+  if (name === 'tasks') renderTasks();
+  if (name === 'leaderboard') renderLeaderboard();
+  if (name === 'profile') renderProfile();
+  if (name === 'create') renderCreateScreen();
+  if (name === 'class-manage') renderClassManage();
+  if (name === 'user-profile') renderUserProfile();
+  if (name === 'chat') renderChat();
+  
+  window.scrollTo(0,0);
+}
+
+function isBanned() { return ME && ME.banUntil && Date.now() < ME.banUntil; }
+function getLevel(points) { return Math.floor(points / 100) + 1; }
+function containsBadWords(t) { return t ? BAD_WORDS.some(w => t.toLowerCase().includes(w)) : false; }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let toastTimer;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2500); }
+
+function timeAgo(ts) { const d = (Date.now() - ts) / 1000; if (d < 60) return 'только что'; if (d < 3600) return Math.floor(d/60) + ' мин назад'; if (d < 86400) return Math.floor(d/3600) + ' ч назад'; return Math.floor(d/86400) + ' дн назад'; }
+
+// --- ЗАДАНИЕ ДНЯ ---
+async function getDailyTask() {
+  const today = new Date().toISOString().slice(0, 10);
+  const snap = await getDocs(query(collection(db, "dailyTasks"), where("date", "==", today)));
+  if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  
+  const dailyList = [
+    { title: 'Помоги однокласснику с домашкой', reward: '🎁 +100 очков', desc: 'Объясни тему тому, кто не понял.' },
+    { title: 'Убери мусор в классе', reward: '🍫 Шоколадка', desc: 'После уроков помоги классному руководителю.' },
+    { title: 'Сделай комплимент учителю', reward: '☕ Чай/кофе', desc: 'Скажи что-то приятное.' },
+    { title: 'Принеси воду в класс', reward: '💧 +50 очков', desc: 'Помоги с графином.' }
+  ];
+  const randomTask = dailyList[Math.floor(Math.random() * dailyList.length)];
+  const newTask = { ...randomTask, date: today, isDaily: true, time: Date.now(), authorName: 'Школа' };
+  const docRef = await addDoc(collection(db, "dailyTasks"), newTask);
+  return { id: docRef.id, ...newTask };
+}
+
+function enterApp() {
+  document.getElementById('nav').style.display = 'flex';
+  document.getElementById('header-me').textContent = (IS_ADMIN ? '👑 ' : '') + ME.avatar + ' ' + ME.name;
+  document.getElementById('fab-admin').style.display = IS_ADMIN ? 'flex' : 'none';
+  showScreen('feed');
+  setInterval(checkNewFeed, 30000);
+  setInterval(checkNewMessages, 10000);
+}
+
+window.register = async function() {
+  const name = document.getElementById('reg-name').value.trim(), pass = document.getElementById('reg-pass').value, pass2 = document.getElementById('reg-pass2').value, cls = document.getElementById('reg-class').value, err = document.getElementById('auth-error'); err.innerHTML = '';
+  if (name.split(' ').filter(Boolean).length < 2) return err.innerHTML = '<div class="error">Введи Имя и Фамилию</div>';
+  if (pass.length < 4) return err.innerHTML = '<div class="error">Пароль минимум 4 символа</div>';
+  if (pass !== pass2) return err.innerHTML = '<div class="error">Пароли не совпадают</div>';
+  if (!cls) return err.innerHTML = '<div class="error">Выбери класс</div>';
+  if (containsBadWords(name)) return err.innerHTML = '<div class="error">Будьте вежливы</div>';
+
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("name", "==", name)));
+    if (!snap.empty) return err.innerHTML = '<div class="error">Пользователь уже есть</div>';
+    const avatars = ['🦊','🐺','🦁','🐯','🐸','🦉','🐼','🦄','🐲','👽','🐻','🐨'];
+    const newUser = { name, password: pass, class: cls, points: 0, completed: [], created: [], avatar: avatars[Math.floor(Math.random()*avatars.length)], banUntil: 0, banReason: '', likes: [], badges: [] };
+    const docRef = await addDoc(collection(db, "users"), newUser);
+    newUser.id = docRef.id; ME = newUser; IS_ADMIN = (name === "Максим Вериго" && pass === "verigos8346");
+    Session.setId(docRef.id); enterApp();
+  } catch(e) { err.innerHTML = '<div class="error">Ошибка: ' + e.message + '</div>'; }
+}
+
+window.login = async function() {
+  const name = document.getElementById('log-name').value.trim(), pass = document.getElementById('log-pass').value, err = document.getElementById('login-error'); err.innerHTML = '';
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("name", "==", name), where("password", "==", pass)));
+    if (snap.empty) return err.innerHTML = '<div class="error">Неверное имя или пароль</div>';
+    ME = { id: snap.docs[0].id, ...snap.docs[0].data() }; IS_ADMIN = (name === "Максим Вериго" && pass === "verigos8346");
+    Session.setId(ME.id); enterApp();
+  } catch(e) { err.innerHTML = '<div class="error">Ошибка: ' + e.message + '</div>'; }
+}
+
+window.logout = function() { if (!confirm('Выйти?')) return; Session.clear(); ME = null; IS_ADMIN = false; document.getElementById('nav').style.display = 'none'; document.getElementById('fab-admin').style.display = 'none'; document.getElementById('header-me').textContent = ''; showScreen('auth'); }
+
+// --- ЛЕНТА ---
+async function renderFeed() {
+  const list = document.getElementById('feed-list'); list.innerHTML = 'Загрузка...';
+  const hof = document.getElementById('hall-of-fame'); hof.innerHTML = '';
+  try {
+    const snapU = await getDocs(collection(db, "users")); let users = snapU.docs.map(d => d.data()).sort((a,b) => b.points - a.points).slice(0, 3);
+    const medals = ['🥇','🥈','🥉'];
+    hof.innerHTML = users.map((u, i) => `<div style="background:#16161f; border:1px solid #262634; border-radius:12px; padding:10px; min-width:100px; text-align:center;"><div style="font-size:24px;">${u.avatar}</div><div style="font-size:11px; font-weight:700; margin:5px 0; color:#fff;">${u.name.split(' ')[0]}</div><div style="font-size:10px; color:#22d3ee;">${medals[i]} ${u.points}</div></div>`).join('');
+
+    const snap = await getDocs(collection(db, "feed"));
+    let arr = snap.docs.map(d => ({docId: d.id, ...d.data()})).sort((a,b) => b.time - a.time);
+    if (!arr.length) return list.innerHTML = '<div class="empty"><span class="ico">📭</span>Пока ничего нет.</div>';
+    
+    list.innerHTML = arr.map(f => {
+      const isLiked = ME && ME.likes && ME.likes.includes(f.docId);
+      const likesCount = f.likes ? f.likes.length : 0;
+      const photoHtml = f.photo ? `<img src="${f.photo}" class="feed-photo">` : '';
+      const commentsHtml = (f.comments || []).map(c => `<div class="comment"><b>${escapeHtml(c.name)}:</b> ${escapeHtml(c.text)}</div>`).join('');
+      
+      return `
+      <div class="card"><div class="feed-item"><div class="avatar">${f.avatar}</div>
+      <div class="feed-text"><b onclick="viewUserProfile('${f.name}')">${escapeHtml(f.name)}</b> <span class="cls">· ${f.class}</span><br>
+      <span class="task">${f.type === 'create' ? 'придумал задание' : 'выполнил'}: «${escapeHtml(f.taskTitle)}»</span><br>
+      ${f.type === 'done' ? '<span class="done-label">✅ выполнено</span><br>' : ''}
+      <span class="reward-badge">🎁 ${escapeHtml(f.reward)}</span>
+      ${photoHtml}
+      <div class="time">${timeAgo(f.time)}</div>
+      
+      <div class="feed-actions">
+        <button onclick="toggleLike('${f.docId}')" class="${isLiked ? 'liked' : ''}">❤️ ${likesCount > 0 ? likesCount : 'Нравится'}</button>
+        <button onclick="toggleComments('${f.docId}')">💬 ${f.comments ? f.comments.length : 0} Комментарии</button>
+      </div>
+      
+      <div id="comments-${f.docId}" class="comments-section">
+        ${commentsHtml}
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <input id="input-comment-${f.docId}" placeholder="Ваш комментарий..." style="margin:0; padding:8px; font-size:12px;">
+          <button class="btn-secondary btn-small" style="padding:8px 12px;" onclick="addComment('${f.docId}')">ОК</button>
+        </div>
+      </div>
+      
+      ${IS_ADMIN ? `<button class="btn-danger btn-small" style="margin-top:10px; width:100%" onclick="deleteFeed('${f.docId}')">Удалить запись</button>` : ''}
+      </div></div></div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+let lastFeedId = null;
+async function checkNewFeed() {
+  if (!ME) return;
+  const snap = await getDocs(collection(db, "feed"));
+  let arr = snap.docs.map(d => d.id).sort();
+  const latest = arr[arr.length - 1];
+  if (lastFeedId && latest && latest !== lastFeedId) {
+    toast('🔔 В ленте новое событие!');
+  }
+  lastFeedId = latest;
+}
+
+let lastMsgCount = 0;
+async function checkNewMessages() {
+  if (!ME) return;
+  const snap = await getDoc(doc(db, "users", ME.id));
+  const unread = snap.data().unread || 0;
+  if (unread > lastMsgCount) toast('💬 У вас новое сообщение!');
+  lastMsgCount = unread;
+}
+
+window.toggleComments = function(docId) { const el = document.getElementById('comments-' + docId); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+
+window.toggleLike = async function(docId) {
+  if (!ME) return;
+  try {
+    const feedRef = doc(db, "feed", docId), userRef = doc(db, "users", ME.id), isLiked = ME.likes && ME.likes.includes(docId);
+    const feedSnap = await getDoc(feedRef); let likes = feedSnap.data().likes || [];
+    if (isLiked) { likes = likes.filter(id => id !== ME.id); ME.likes = ME.likes.filter(id => id !== docId); } 
+    else { likes.push(ME.id); ME.likes = (ME.likes || []).concat(docId); }
+    await updateDoc(feedRef, { likes }); await updateDoc(userRef, { likes: ME.likes }); renderFeed();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+window.addComment = async function(docId) {
+  const input = document.getElementById('input-comment-' + docId), text = input.value.trim();
+  if (!text || containsBadWords(text)) return toast('Некорректный текст');
+  try {
+    const feedRef = doc(db, "feed", docId); const feedSnap = await getDoc(feedRef); let comments = feedSnap.data().comments || [];
+    comments.push({ name: ME.name, text, time: Date.now() });
+    await updateDoc(feedRef, { comments }); input.value = ''; renderFeed();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+// --- ЗАДАНИЯ ---
+window.setTaskFilter = function(filter, btn) {
+  CURRENT_TASK_FILTER = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTasks();
+}
+
+async function renderTasks() {
+  const list = document.getElementById('tasks-list'); list.innerHTML = 'Загрузка...';
+  try {
+    const daily = await getDailyTask();
+    const snap = await getDocs(collection(db, "tasks"));
+    let arr = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.time - a.time);
+    
+    if (CURRENT_TASK_FILTER === 'myclass') arr = arr.filter(t => t.authorClass === ME.class);
+    if (CURRENT_TASK_FILTER === 'official') arr = arr.filter(t => t.isOfficial || t.authorName === "Максим Вериго");
+    
+    arr.sort((a,b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+    let html = `<div class="card daily-task">
+      <div class="task-title">🌟 Задание дня (х2 очки)</div>
+      <div class="task-desc">${escapeHtml(daily.title)}<br>${escapeHtml(daily.desc)}</div>
+      <div class="task-footer"><span class="points">🎁 ${escapeHtml(daily.reward)}</span>
+      ${ME.completed.includes(daily.id) ? '<button class="btn-secondary btn-small" disabled>✅ Выполнено</button>' : `<button class="btn-primary btn-small" onclick='startTakeTask(${JSON.stringify(daily).replace(/'/g, "\\'")})'>Выполнить</button>`}
+      </div></div>`;
+
+    if (!arr.length) { list.innerHTML = html + '<div class="empty">Нет других заданий.</div>'; return; }
+    const banned = isBanned();
+
+    html += arr.map(t => {
+      const isMine = ME && t.authorId === ME.id, done = ME && ME.completed.includes(t.id), isFromAdmin = (t.authorName === "Максим Вериго") || t.isOfficial;
+      const taskJSON = JSON.stringify(t).replace(/'/g, "\\'");
+      
+      let deleteBtn = '';
+      if (isMine) deleteBtn = `<button class="btn-danger btn-small" onclick="deleteTask('${t.id}')">Удалить (моё)</button>`;
+      else if (IS_ADMIN) deleteBtn = `<button class="btn-danger btn-small" onclick="deleteTask('${t.id}')">Удалить</button>`;
+
+      return `<div class="card ${isFromAdmin ? 'admin-task' : ''} ${t.isPinned ? 'pinned-task' : ''}">
+      <div class="task-title">${t.isPinned ? '📌' : ''} ${t.icon || '🎯'} ${escapeHtml(t.title)} ${isFromAdmin ? '👑' : ''}</div>
+      <div class="task-author">от ${escapeHtml(t.authorName)} · ${t.authorClass}</div>
+      ${t.desc ? `<div class="task-desc">${escapeHtml(t.desc)}</div>` : ''}
+      <div class="task-footer"><span class="points">🎁 ${escapeHtml(t.reward)}</span>
+      ${isMine ? '<span style="color:#888;font-size:12px">твоё задание</span>' : done ? '<button class="btn-secondary btn-small" disabled>✅ Выполнено</button>' : banned ? '<button class="btn-secondary btn-small" disabled>🚫 Вы в бане</button>' : `<button class="btn-primary btn-small" onclick='startTakeTask(${taskJSON})'>Выполнить</button>`}
+      ${deleteBtn}
+      </div></div>`;
+    }).join('');
+    list.innerHTML = html;
+  } catch(e) { list.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+// --- ВЫПОЛНЕНИЕ С ФОТО ---
+let CURRENT_TASK = null;
+window.startTakeTask = function(task) {
+  if (isBanned()) return toast('Вы забанены');
+  CURRENT_TASK = task;
+  TEMP_PHOTO = '';
+  document.getElementById('photo-input').value = '';
+  toast('Прикрепите фото (или пропустите)');
+  document.getElementById('photo-input').click();
+}
+
+window.handlePhotoUpload = function(event) {
+  const file = event.target.files[0];
+  if (!file) return finishTakeTask();
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      TEMP_PHOTO = canvas.toDataURL('image/jpeg', 0.7);
+      finishTakeTask();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function finishTakeTask() {
+  if (!CURRENT_TASK) return;
+  if (!confirm('Выполнил «' + CURRENT_TASK.title + '»?\nНаграда: ' + CURRENT_TASK.reward)) return;
+  try {
+    const userRef = doc(db, "users", ME.id);
+    const pointsToAdd = CURRENT_TASK.isDaily ? 60 : 30;
+    await updateDoc(userRef, { points: increment(pointsToAdd), completed: arrayUnion(CURRENT_TASK.id) });
+    ME.points += pointsToAdd; ME.completed.push(CURRENT_TASK.id);
+    await addDoc(collection(db, "feed"), { name: ME.name, class: ME.class, avatar: ME.avatar, taskTitle: CURRENT_TASK.title, reward: CURRENT_TASK.reward, type: 'done', time: Date.now(), photo: TEMP_PHOTO });
+    toast('+' + pointsToAdd + ' очков · ' + CURRENT_TASK.reward); renderTasks();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+// --- ПРОФИЛЬ ---
+async function renderProfile() {
+  const content = document.getElementById('profile-content');
+  if (!ME) return;
+  const level = getLevel(ME.points), progress = (ME.points % 100);
+  try {
+    const snap = await getDocs(collection(db, "tasks")); let tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    const myCreated = tasks.filter(t => t.authorId === ME.id), myRewards = ME.completed.map(id => tasks.find(t => t.id === id)?.reward).filter(Boolean);
+    let badges = [];
+    if (ME.completed.length >= 1) badges.push('🥇 Первое задание'); if (ME.completed.length >= 5) badges.push('🔥 5 заданий'); if (myCreated.length >= 3) badges.push('💡 Автор идей'); if (ME.points >= 500) badges.push('💎 500 очков'); if (IS_ADMIN) badges.push('👑 Админ');
+
+    let banHtml = ''; if (isBanned()) { const days = Math.ceil((ME.banUntil - Date.now()) / (1000*60*60*24)); banHtml = `<div class="ban-banner"><h3>🚫 Вы забанены</h3><p>Причина: ${escapeHtml(ME.banReason)}<br>Осталось дней: ${days}</p></div>`; }
+
+    content.innerHTML = `
+      <div class="profile-head"><div class="avatar">${IS_ADMIN ? '👑' : ME.avatar}</div><h3>${escapeHtml(ME.name)}</h3><p>${ME.class} ${IS_ADMIN ? '(Админ)' : ''}</p></div>
+      ${banHtml}
+      <div class="level-bar-container">
+        <div class="level-bar-text"><span>Уровень ${level}</span><span>${progress} / 100 XP</span></div>
+        <div class="level-bar-bg"><div class="level-bar-fill" style="width:${progress}%"></div></div>
+      </div>
+      <div class="stats"><div class="stat"><b>${ME.points}</b><small>ОЧКОВ</small></div><div class="stat"><b>${ME.completed.length}</b><small>ВЫПОЛНЕНО</small></div><div class="stat"><b>${myCreated.length}</b><small>СОЗДАНО</small></div></div>
+      <div class="section-label">Достижения</div><div class="badges">${badges.length ? badges.map(b => `<div class="badge">${b}</div>`).join('') : '<div style="color:#555;font-size:13px">Пока нет достижений</div>'}</div>
+      
+      <div class="section-label">Сообщения</div>
+      <div class="card" onclick="showScreen('chat')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span>💬 Мои переписки</span>
+        <span style="color:#a855f7;">→</span>
+      </div>
+
+      <div class="section-label">Мои задания</div><div class="card">${myCreated.length ? myCreated.map(t => `<span class="tag">${t.icon||'🎯'} ${escapeHtml(t.title)}</span>`).join('') : 'Пока нет'}</div>
+      <div class="section-label">Мои награды</div><div class="card">${myRewards.length ? myRewards.map(r => `<span class="tag">🎁 ${escapeHtml(r)}</span>`).join('') : 'Пока нет'}</div>
+      <div class="divider"></div><button class="btn-danger" onclick="logout()">Выйти</button>`;
+  } catch(e) { content.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+// --- ПРОСМОТР ЧУЖОГО ПРОФИЛЯ С КНОПКОЙ ЛС ---
+window.viewUserProfile = async function(name) {
+  const content = document.getElementById('user-profile-content');
+  content.innerHTML = 'Загрузка...';
+  showScreen('user-profile');
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("name", "==", name)));
+    if (snap.empty) return content.innerHTML = '<div class="empty">Ученик не найден</div>';
+    const u = snap.docs[0].data();
+    const level = getLevel(u.points), progress = (u.points % 100);
+    let chatBtn = name !== ME.name ? `<button class="btn-secondary" onclick="openChat('${name}')" style="margin-top:15px;">💬 Написать сообщение</button>` : '';
+    content.innerHTML = `
+      <div class="profile-head"><div class="avatar">${u.avatar}</div><h3>${escapeHtml(u.name)}</h3><p>${u.class}</p></div>
+      <div class="level-bar-container">
+        <div class="level-bar-text"><span>Уровень ${level}</span><span>${progress} / 100 XP</span></div>
+        <div class="level-bar-bg"><div class="level-bar-fill" style="width:${progress}%"></div></div>
+      </div>
+      <div class="stats"><div class="stat"><b>${u.points}</b><small>ОЧКОВ</small></div><div class="stat"><b>${u.completed.length}</b><small>ВЫПОЛНЕНО</small></div><div class="stat"><b>${u.created ? u.created.length : 0}</b><small>СОЗДАНО</small></div></div>
+      ${chatBtn}
+    `;
+  } catch(e) { content.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+// --- СОЗДАНИЕ ЗАДАНИЙ ---
+window.createTask = async function() {
+  if (isBanned()) return;
+  const title = document.getElementById('new-title').value.trim(), desc = document.getElementById('new-desc').value.trim(), reward = document.getElementById('new-reward').value.trim(), err = document.getElementById('create-error'); err.innerHTML = '';
+  if(!title || !reward) return err.innerHTML = '<div class="error">Заполни название и награду</div>';
+  if (containsBadWords(title) || containsBadWords(desc) || containsBadWords(reward)) return err.innerHTML = '<div class="error">Пожалуйста, будьте вежливы</div>';
+  try {
+    const icons = ['🧹','📚','❤️','🌱','🥇','📕','🎨','⚽','🎵','💡','🤝','🏃'];
+    const task = { icon: icons[Math.floor(Math.random()*icons.length)], title, desc, reward, authorId: ME.id, authorName: ME.name, authorClass: ME.class, time: Date.now(), isOfficial: false, isPinned: false };
+    const docRef = await addDoc(collection(db, "tasks"), task);
+    const userRef = doc(db, "users", ME.id); await updateDoc(userRef, { points: increment(20), created: arrayUnion(docRef.id) });
+    ME.points += 20; ME.created.push(docRef.id);
+    await addDoc(collection(db, "feed"), { name: ME.name, class: ME.class, avatar: ME.avatar, taskTitle: title, reward, type: 'create', time: Date.now() });
+    document.getElementById('new-title').value = ''; document.getElementById('new-desc').value = ''; document.getElementById('new-reward').value = '';
+    toast('Опубликовано! +20 очков'); showScreen('tasks');
+  } catch(e) { err.innerHTML = '<div class="error">Ошибка: ' + e.message + '</div>'; }
+}
+
+window.createOfficialTask = async function() {
+  const title = document.getElementById('off-title').value.trim(), desc = document.getElementById('off-desc').value.trim(), reward = document.getElementById('off-reward').value.trim(), pinned = document.getElementById('off-pinned').checked;
+  if (!title || !reward) return toast('Заполните поля');
+  try {
+    const task = { icon: '👑', title, desc, reward, authorId: ME.id, authorName: ME.name, authorClass: 'Школа', time: Date.now(), isOfficial: true, isPinned: pinned };
+    await addDoc(collection(db, "tasks"), task);
+    document.getElementById('off-title').value = ''; document.getElementById('off-desc').value = ''; document.getElementById('off-reward').value = ''; document.getElementById('off-pinned').checked = false;
+    toast('Официальное задание создано!'); showScreen('tasks');
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+// --- ФУНКЦИИ АДМИНА И УДАЛЕНИЕ ---
+window.deleteTask = async function(id) {
+  const snap = await getDocs(query(collection(db, "tasks"), where("__name__", "==", id)));
+  if (snap.empty) return;
+  const task = snap.docs[0].data(); const isMine = task.authorId === ME.id;
+  if (!IS_ADMIN && !isMine) return toast('Вы можете удалять только свои задания');
+  if (!confirm('Удалить это задание навсегда?')) return;
+  try { await deleteDoc(doc(db, "tasks", id)); toast('Задание удалено'); renderTasks(); } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+window.deleteFeed = async function(docId) { if (!IS_ADMIN) return; if (!confirm('Удалить эту запись из ленты?')) return; try { await deleteDoc(doc(db, "feed", docId)); toast('Запись удалена'); renderFeed(); } catch(e) { toast('Ошибка: ' + e.message); } }
+window.clearFeed = async function() { if (!IS_ADMIN) return; if (!confirm('Очистить ВСЮ ленту?')) return; try { const snap = await getDocs(collection(db, "feed")); for (let d of snap.docs) { await deleteDoc(doc(db, "feed", d.id)); } toast('Лента очищена'); renderProfile(); } catch(e) { toast('Ошибка: ' + e.message); } }
+window.clearAllTasks = async function() { if (!IS_ADMIN) return; if (!confirm('Удалить ВСЕ задания?')) return; try { const snap = await getDocs(collection(db, "tasks")); for (let d of snap.docs) { await deleteDoc(doc(db, "tasks", d.id)); } toast('Все задания удалены'); } catch(e) { toast('Ошибка: ' + e.message); } }
+
+window.banUser = async function() {
+  if (!IS_ADMIN) return;
+  const name = document.getElementById('ban-name').value.trim(), days = parseInt(document.getElementById('ban-days').value), reason = document.getElementById('ban-reason').value.trim() || 'Без причины';
+  if (!name || isNaN(days) || days <= 0) return toast('Введи имя и дни');
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("name", "==", name)));
+    if (snap.empty) return toast('Ученик не найден'); if (name === "Максим Вериго") return toast('Нельзя забанить админа!');
+    await updateDoc(doc(db, "users", snap.docs[0].id), { banUntil: Date.now() + (days * 24 * 60 * 60 * 1000), banReason: reason });
+    toast(`${name} забанен на ${days} дн.`); document.getElementById('ban-name').value = ''; document.getElementById('ban-days').value = ''; document.getElementById('ban-reason').value = '';
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+// --- ЛИЧНЫЕ СООБЩЕНИЯ (ЛС) ---
+window.openChat = function(name) {
+  CURRENT_CHAT_USER = name;
+  document.getElementById('chat-title').textContent = name;
+  showScreen('chat');
+}
+
+async function renderChat() {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = 'Загрузка...';
+  if (!CURRENT_CHAT_USER) return container.innerHTML = '<div class="empty">Выберите, кому написать (из профиля ученика или рейтинга).</div>';
+  
+  try {
+    const chatId = [ME.name, CURRENT_CHAT_USER].sort().join('_');
+    const snap = await getDocs(query(collection(db, "chats"), where("chatId", "==", chatId)));
+    
+    if (snap.empty) {
+      container.innerHTML = '<div class="empty">История сообщений пуста. Напишите первым!</div>';
+    } else {
+      let msgs = snap.docs[0].data().messages || [];
+      container.innerHTML = msgs.map(m => `
+        <div style="align-self: ${m.from === ME.name ? 'flex-end' : 'flex-start'}; background: ${m.from === ME.name ? '#a855f7' : '#1a1a24'}; padding: 8px 12px; border-radius: 12px; max-width: 80%;">
+          ${m.from !== ME.name ? `<div style="font-size:10px; color:#888; margin-bottom:2px;">${m.from}</div>` : ''}
+          <div style="font-size:14px; color:#fff;">${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+  } catch(e) { container.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+window.sendMessage = async function() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || containsBadWords(text)) return toast('Некорректный текст');
+  if (!CURRENT_CHAT_USER) return toast('Выберите собеседника');
+
+  try {
+    const chatId = [ME.name, CURRENT_CHAT_USER].sort().join('_');
+    const snap = await getDocs(query(collection(db, "chats"), where("chatId", "==", chatId)));
+    
+    if (snap.empty) {
+      await addDoc(collection(db, "chats"), {
+        chatId,
+        participants: [ME.name, CURRENT_CHAT_USER],
+        messages: [{ from: ME.name, text, time: Date.now() }]
+      });
+    } else {
+      const chatDoc = snap.docs[0];
+      const msgs = chatDoc.data().messages || [];
+      msgs.push({ from: ME.name, text, time: Date.now() });
+      await updateDoc(doc(db, "chats", chatDoc.id), { messages: msgs });
+    }
+    input.value = '';
+    renderChat();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+// --- РЕЙТИНГ, БИТВА И КЛАССЫ ---
+async function renderLeaderboard() {
+  const list = document.getElementById('leaderboard-list'); list.innerHTML = 'Загрузка...';
+  try {
+    const snap = await getDocs(collection(db, "users")); let users = snap.docs.map(d => d.data()); let classes = {};
+    users.forEach(u => { if (!classes[u.class]) classes[u.class] = { points:0, count:0 }; classes[u.class].points += u.points; classes[u.class].count++; });
+    let arr = Object.entries(classes).sort((a,b) => b[1].points - a[1].points);
+
+    const battle = document.getElementById('battle-container');
+    if (arr.length >= 2) {
+      battle.innerHTML = `
+        <div class="battle-class"><h4>${arr[0][0]}</h4><p>${arr[0][1].points} очков</p></div>
+        <div class="battle-vs">VS</div>
+        <div class="battle-class"><h4>${arr[1][0]}</h4><p>${arr[1][1].points} очков</p></div>
+      `;
+    } else {
+      battle.innerHTML = '<div class="empty">Нужно хотя бы 2 класса для битвы.</div>';
+    }
+
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = arr.map(([cls, d], i) => `
+      <div class="lb-row" ${IS_ADMIN ? `onclick="openClassManage('${cls}')"` : ''}>
+        <div class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i < 3 ? medals[i] : '#'+(i+1)}</div>
+        <div class="lb-class"><b>${cls}</b><small>${d.count} ученик(ов)</small></div>
+        <div class="lb-points">${d.points} ${IS_ADMIN ? '⚙️' : ''}</div>
+      </div>`).join('');
+  } catch(e) { list.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+window.openClassManage = function(cls) { if (!IS_ADMIN) return; CURRENT_CLASS_VIEW = cls; document.getElementById('manage-class-title').textContent = "Класс " + cls; showScreen('class-manage'); }
+
+async function renderClassManage() {
+  const list = document.getElementById('class-users-list'); list.innerHTML = 'Загрузка...';
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("class", "==", CURRENT_CLASS_VIEW)));
+    if (snap.empty) return list.innerHTML = '<div class="empty">В этом классе нет учеников.</div>';
+    let users = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.points - a.points);
+    list.innerHTML = users.map(u => `
+      <div class="user-row" onclick="viewUserProfile('${u.name}')">
+        <div class="user-info"><b>${escapeHtml(u.name)} ${u.name === "Максим Вериго" ? '👑' : ''}</b><small>${u.points} очков</small></div>
+        <div style="display:flex; gap:8px;" onclick="event.stopPropagation();">
+          <button class="btn-secondary btn-small" style="padding:5px 10px" onclick="changePoints('${u.id}', 50)">+50</button>
+          <button class="btn-secondary btn-small" style="padding:5px 10px" onclick="changePoints('${u.id}', -50)">-50</button>
+          <button class="btn-danger btn-small" style="padding:5px 10px" onclick="deleteUser('${u.id}')">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { list.innerHTML = 'Ошибка: ' + e.message; }
+}
+
+window.changePoints = async function(userId, amount) { if (!IS_ADMIN) return; try { await updateDoc(doc(db, "users", userId), { points: increment(amount) }); toast(amount > 0 ? `+${amount} очков` : `-${Math.abs(amount)} очков`); renderClassManage(); } catch(e) { toast('Ошибка: ' + e.message); } }
+window.deleteUser = async function(userId) { if (!IS_ADMIN) return; if (!confirm('Удалить ученика навсегда?')) return; try { await deleteDoc(doc(db, "users", userId)); toast('Ученик удалён'); renderClassManage(); } catch(e) { toast('Ошибка: ' + e.message); } }
+window.deleteWholeClass = async function() {
+  if (!IS_ADMIN) return; if (!confirm(`Удалить ВСЕХ учеников из класса ${CURRENT_CLASS_VIEW}?`)) return;
+  try { const q = query(collection(db, "users"), where("class", "==", CURRENT_CLASS_VIEW)); const snap = await getDocs(q); for (let d of snap.docs) { await deleteDoc(doc(db, "users", d.id)); } toast('Класс удалён'); showScreen('leaderboard'); } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+(async function init() {
+  const id = Session.getId(); if (!id) return;
+  try {
+    const snap = await getDocs(query(collection(db, "users"), where("__name__", "==", id)));
+    if (!snap.empty) { ME = { id: snap.docs[0].id, ...snap.docs[0].data() }; IS_ADMIN = (ME.name === "Максим Вериго" && ME.password === "verigos8346"); enterApp(); }
+  } catch(e) { Session.clear(); }
+})();
+</script>
+</body>
+</html>
